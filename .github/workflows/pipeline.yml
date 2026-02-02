@@ -1,0 +1,94 @@
+name: Elixir CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  static_analysis:
+    name: Lint & Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.15.x'
+        otp-version: '26.x'
+
+    - name: Restore dependencies cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ql_core/deps
+          ql_core/_build
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+
+    - name: Install dependencies
+      run: |
+        cd ql_core
+        mix deps.get
+
+    - name: Check Formatting
+      run: |
+        cd ql_core
+        mix format --check-formatted
+
+    - name: Security Scan (Sobelow)
+      run: |
+        cd ql_core
+        mix sobelow --config
+
+    - name: Code Quality (Credo)
+      run: |
+        cd ql_core
+        mix credo --strict
+
+  unit_tests:
+    name: Domain Tests
+    needs: static_analysis
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_password
+          POSTGRES_DB: quantum_ledger_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.15.x'
+        otp-version: '26.x'
+
+    - name: Install dependencies
+      run: |
+        cd ql_core
+        mix deps.get
+
+    - name: Run Tests
+      run: |
+        cd ql_core
+        mix test
+      env:
+        MIX_ENV: test
+        DB_USER: postgres
+        DB_PASSWORD: postgres_password
+        DB_NAME: quantum_ledger_test
+        DB_HOST: localhost

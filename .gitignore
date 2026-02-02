@@ -1,0 +1,29 @@
+Elixir/Phoenix specific
+
+/_build
+/deps
+/*.beam
+/priv/static/assets
+/priv/plts
+/priv/cert
+
+Configuration and Secrets
+
+/config/*.secret.exs
+/config/runtime.exs.bak
+.env
+.env.local
+
+Docker and OS
+
+.DS_Store
+Thumbs.db
+node_modules
+/postgres_data
+/influxdb_data
+
+IDEs
+
+.elixir_ls/
+.vscode/
+.idea/
