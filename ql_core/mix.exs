@@ -50,6 +50,7 @@ defmodule QlCore.MixProject do
 
       # --- Testing Frameworks ---
       {:white_bread, "~> 4.5", only: [:test]},
+      {:gherkin, "~> 1.4.0", only: :test, override: true},
       {:ex_machina, "~> 2.8", only: [:test]},
       {:mox, "~> 1.2", only: [:test]}
     ]
