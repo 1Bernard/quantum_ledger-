@@ -1,0 +1,5 @@
+# This file tells Sobelow which security checks to ignore or prioritize.
+[
+  # You can add specific skips here as the project grows
+  # skip: ["Config.HTTPS"]
+]
