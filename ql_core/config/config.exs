@@ -3,8 +3,8 @@ import Config
 # --- General Application Config ---
 config :ql_core,
   ecto_repos: [QLCore.Repo],
-  generators: [binary_id: true, timestamp_type: :utc_datetime],
-  event_stores: [QLCore.EventStore]
+  event_stores: [QLCore.EventStore],
+  generators: [binary_id: true, timestamp_type: :utc_datetime]
 
 # --- EventStore Infrastructure ---
 # We keep the Commanded-specific settings here

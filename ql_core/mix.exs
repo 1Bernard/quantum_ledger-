@@ -1,4 +1,4 @@
-defmodule QlCore.MixProject do
+defmodule QLCore.MixProject do
   use Mix.Project
 
   def project do
@@ -8,19 +8,26 @@ defmodule QlCore.MixProject do
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      elixirc_paths: elixirc_paths(Mix.env()),
       # Industry Standard: Ensure we check types with Dialyzer to catch logic errors early
       dialyzer: [
         plt_add_apps: [:ex_unit, :mix],
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
-      ]
+      ],
+      aliases: aliases()
     ]
   end
+
+  # Specifies which paths to compile per environment.
+  # We include "test/support" in :test so that DataCase is available to White-Bread.
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
       extra_applications: [:logger],
-      mod: {QlCore.Application, []}
+      mod: {QLCore.Application, []}
     ]
   end
 
@@ -53,6 +60,13 @@ defmodule QlCore.MixProject do
       {:gherkin, "~> 1.4.0", only: :test, override: true},
       {:ex_machina, "~> 2.8", only: [:test]},
       {:mox, "~> 1.2", only: [:test]}
+    ]
+  end
+
+  defp aliases do
+    [
+      # Ensures ExUnit is started before running WhiteBread
+      "test.features": ["run -e 'ExUnit.start(autorun: false)'", "white_bread.run"]
     ]
   end
 end

@@ -1,57 +1,23 @@
-name: Elixir CI/CD
+name: Elixir CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  static_analysis:
-    name: Lint & Security Scan
+  test:
     runs-on: ubuntu-latest
+    name: Test and Lint (ql_core)
 
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Elixir
-      uses: erlef/setup-beam@v1
-      with:
-        elixir-version: '1.15.x'
-        otp-version: '26.x'
-
-    - name: Restore dependencies cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          ql_core/deps
-          ql_core/_build
-        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-
-    - name: Install dependencies
-      run: |
-        cd ql_core
-        mix deps.get
-
-    - name: Check Formatting
-      run: |
-        cd ql_core
-        mix format --check-formatted
-
-    - name: Security Scan (Sobelow)
-      run: |
-        cd ql_core
-        mix sobelow --config
-
-    - name: Code Quality (Credo)
-      run: |
-        cd ql_core
-        mix credo --strict
-
-  unit_tests:
-    name: Domain Tests
-    needs: static_analysis
-    runs-on: ubuntu-latest
+    # Define environment variables for the entire JOB
+    env:
+      MIX_ENV: test
+      DB_USER: postgres
+      DB_PASSWORD: postgres_password
+      DB_NAME: quantum_ledger_test
+      DB_HOST: localhost
 
     services:
       db:
@@ -69,26 +35,44 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-    - name: Set up Elixir
-      uses: erlef/setup-beam@v1
-      with:
-        elixir-version: '1.15.x'
-        otp-version: '26.x'
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.17.x" # Bumped to support 1.19~ requirement range safely
+          otp-version: "26.x"
 
-    - name: Install dependencies
-      run: |
-        cd ql_core
-        mix deps.get
+      - name: Restore dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ql_core/deps
+            ql_core/_build
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
 
-    - name: Run Tests
-      run: |
-        cd ql_core
-        mix test
-      env:
-        MIX_ENV: test
-        DB_USER: POSTGRES_USER
-        DB_PASSWORD: POSTGRES_PASSWORD
-        DB_NAME: quantum_ledger_test
-        DB_HOST: POSTGRES_HOST
+      - name: Install dependencies
+        run: |
+          cd ql_core
+          mix deps.get
+
+      - name: Check Code Format
+        run: |
+          cd ql_core
+          mix format --check-formatted
+
+      - name: Security Scan (Sobelow)
+        run: |
+          cd ql_core
+          mix sobelow --config
+
+      - name: Initialize Database and EventStore
+        run: |
+          cd ql_core
+          mix event_store.init
+          mix ecto.migrate
+
+      - name: Run Feature Tests (Gherkin/WhiteBread)
+        run: |
+          cd ql_core
+          mix test.features

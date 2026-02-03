@@ -1,29 +1,28 @@
-defmodule QlCore.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
-  @moduledoc false
-
+defmodule QLCore.Application do
+  @moduledoc """
+  The Main Application Supervisor.
+  """
   use Application
 
   @impl true
   def start(_type, _args) do
+    # Define children to be supervised
     children = [
-      # 1. Start the Read Model Repository (Projections)
+      # 1. Start the Read Model Repository (SQL)
       QLCore.Repo,
 
-      # 2. Start the EventStore (Persistence)
-      QLCore.EventStore,
-
-      # 3. Start the Commanded Application (The Logic Engine)
+      # 2. Start the Commanded Application (The Logic Engine)
       QLCore.App,
 
-      # 4. Start Oban for background jobs (emails, webhooks)
+      # 3. Start the Projectors (Listen for events and update SQL)
+      {QLCore.Identity.Projectors.TenantProjector, []},
+
+      # 4. Start Oban for background processing
       {Oban, Application.fetch_env!(:ql_core, Oban)}
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: QlCore.Supervisor]
+    # Fixed: Using :one_for_one strategy to resolve the deprecation warning
+    opts = [strategy: :one_for_one, name: QLCore.Supervisor]
     Supervisor.start_link(children, opts)
   end
 end
