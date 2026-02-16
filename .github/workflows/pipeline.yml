@@ -29,7 +29,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -69,7 +69,6 @@ jobs:
       - name: Verify PostgreSQL connection
         run: |
           echo "Waiting for PostgreSQL..."
-          # Install pg_isready if not available (alpine images often have it, runner might need client)
           sudo apt-get update -qq && sudo apt-get install -y postgresql-client
           until pg_isready -h localhost -U ${{ secrets.DB_USER || vars.DB_USER || 'postgres' }}; do
             sleep 2
@@ -79,6 +78,13 @@ jobs:
       - name: Initialize Database and EventStore
         run: |
           cd ql_core
+          # Ensure DB exists
+          mix ecto.create
+          # Manually create the event_store schema as WhiteBread/EventStore expects it
+          PGPASSWORD=${{ secrets.DB_PASSWORD || vars.DB_PASSWORD || 'postgres_password' }} \
+          psql -h localhost -U ${{ secrets.DB_USER || vars.DB_USER || 'postgres' }} -d ${{ secrets.DB_NAME || vars.DB_NAME || 'quantum_ledger_test' }} \
+          -c "CREATE SCHEMA IF NOT EXISTS event_store;"
+
           mix event_store.init
           mix ecto.migrate
 
